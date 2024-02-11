@@ -12,6 +12,13 @@ const universitySchema = new mongoose.Schema({
   accreditation: { type: String },
   programsOffered: [{ type: String }],
   campusSize: { type: String },
+  date: {
+    type: Date,
+    default: () =>
+      new Date(
+        new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+      ),
+  },
   studentsEnrolled: { type: Number },
   imageUrl: { type: String }
 });

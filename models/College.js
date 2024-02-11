@@ -11,6 +11,13 @@ const collegeSchema = new mongoose.Schema({
     ref: "University",
     required: true,
   },
+  date: {
+    type: Date,
+    default: () =>
+      new Date(
+        new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+      ),
+  },
 });
 
 module.exports = mongoose.model("College", collegeSchema);
