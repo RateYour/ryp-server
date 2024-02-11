@@ -20,7 +20,7 @@ const universitySchema = new mongoose.Schema({
       ),
   },
   studentsEnrolled: { type: Number },
-  imageUrl: { type: String }
+  image: { type: String }
 });
 
 module.exports = mongoose.model('University', universitySchema);

@@ -1,19 +1,7 @@
 // models/Professor.js
 const mongoose = require("mongoose");
 
-const feedbackSchema = new mongoose.Schema({
-  rating: { type: Number, min: 1, max: 5 },
-  comment: { type: String },
-  date: {
-    type: Date,
-    default: () =>
-      new Date(
-        new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
-      ),
-  },
-});
-
-const professorSchema = new mongoose.Schema({
+const tempProfessorSchema = new mongoose.Schema({
   name: { type: String, required: true },
   department: { type: String },
   gender: {
@@ -31,12 +19,8 @@ const professorSchema = new mongoose.Schema({
     ],
     required: true,
   },
-  image: { type: String },
-  college: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "College",
-    required: true,
-  },
+  college: {type: String, required: true},
+  university: {type: String, required: true},
   date: {
     type: Date,
     default: () =>
@@ -45,7 +29,6 @@ const professorSchema = new mongoose.Schema({
       ),
   },
   subjects: [{ type: String }], // Array of subjects the professor teaches
-  feedbacks: [feedbackSchema], // Array of feedback objects
 });
 
-module.exports = mongoose.model("Professor", professorSchema);
+module.exports = mongoose.model("TempProfessor", tempProfessorSchema);

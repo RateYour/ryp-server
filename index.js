@@ -2,11 +2,21 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const professorRouter = require("./routes/professors");
+const universityRouter = require("./routes/university");
+const cors = require("cors");
 
-require('dotenv').config();
+require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const corsOptions = {
+  origin: "*",
+  credentials: true,
+  optionSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
 
 // Connect to MongoDB
 // mongoose
@@ -27,6 +37,7 @@ app.use(express.json());
 
 // Routes
 app.use("/professors", professorRouter);
+app.use("/universities", universityRouter);
 
 // Start server
 app.listen(PORT, () => {
