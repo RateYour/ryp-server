@@ -5,24 +5,46 @@ const Professor = require("../models/Professor");
 const College = require("../models/College");
 const University = require("../models/University");
 const TempProfessor = require("../models/TempProfessor");
+const Count = require("../models/Count");
 // Get all professors
 router.get("/", async (req, res) => {
   try {
-    const professors = await Professor.find();
+    const professors = await Professor.find().populate({
+      path: "college",
+      populate: {
+        path: "university",
+      },
+    });
+
+    // Increment the count by 1
+    await Count.findOneAndUpdate(
+      {},
+      { $inc: { count: 1 } },
+      { new: true, upsert: true }
+    );
+
     res.json(professors);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-
-
 // Get a single professor
 router.get("/:id", getProfessor, (req, res) => {
   res.json(res.professor);
 });
 
-router.post('/tempProfessor/', async (req, res) => {
+router.get("/tempProfessor/all", async (req, res) => {
+  try {
+    const tempProfessors = await TempProfessor.find();
+    res.json(tempProfessors);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+router.post("/tempProfessor/", async (req, res) => {
   try {
     const {
       name,
@@ -32,12 +54,10 @@ router.post('/tempProfessor/', async (req, res) => {
       college,
       university,
       subjects,
-      passcode
     } = req.body;
 
-    if(passcode!=process.env.PASSCODE){
-      return res.status(403).send('Forbidden: Invalid passcode');
-    }
+    // Split the subjects string into an array
+    const subjectsArray = subjects.split(',');
 
     // Create a new temporary professor instance
     const newTempProfessor = new TempProfessor({
@@ -47,7 +67,7 @@ router.post('/tempProfessor/', async (req, res) => {
       title,
       college,
       university,
-      subjects
+      subjects: subjectsArray, // Assign the subjects array
     });
 
     // Save the temporary professor to the database
@@ -56,14 +76,30 @@ router.post('/tempProfessor/', async (req, res) => {
     res.json(newTempProfessor);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).send("Server Error");
   }
 });
 
+
 // Create a professor
 router.post("/", async (req, res) => {
-  const { name, gender, department, title,image, subjects, collegeName, universityName } =
-    req.body;
+  const {
+    name,
+    gender,
+    department,
+    title,
+    image,
+    subjects,
+    collegeName,
+    universityName,
+    passcode
+  } = req.body;
+
+  console.log(req.body);
+
+   if (passcode != process.env.PASSCODE) {
+      return res.status(403).send("Forbidden: Invalid passcode");
+    }
 
   try {
     let university = await University.findOne({ name: universityName });
@@ -92,6 +128,8 @@ router.post("/", async (req, res) => {
     });
 
     const newProfessor = await professor.save();
+    await TempProfessor.findOneAndDelete({ _id: req.body.id });
+
     res.status(201).json(newProfessor);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -131,7 +169,9 @@ router.post("/multipleprofessor/", async (req, res) => {
 
   try {
     // Extract unique university names
-    const uniqueUniversityNames = Array.from(new Set(professorsData.map(professor => professor.universityName)));
+    const uniqueUniversityNames = Array.from(
+      new Set(professorsData.map((professor) => professor.universityName))
+    );
 
     // Create or fetch universities in bulk
     const universities = await Promise.all(
@@ -149,7 +189,7 @@ router.post("/multipleprofessor/", async (req, res) => {
 
     // Map university names to their respective IDs
     const universityMap = {};
-    universities.forEach(university => {
+    universities.forEach((university) => {
       universityMap[university.name] = university._id;
     });
 
@@ -193,9 +233,6 @@ router.post("/multipleprofessor/", async (req, res) => {
   }
 });
 
-
-
-
 // Delete a professor
 // router.delete("/:id", getProfessor, async (req, res) => {
 //   try {
@@ -224,15 +261,29 @@ router.post("/:id/feedback", getProfessor, async (req, res) => {
 
 // Middleware function to get professor by ID
 async function getProfessor(req, res, next) {
+  // try {
+  //   const professor = await Professor.findById(req.params.id);
+  //   if (professor == null) {
+  //     return res.status(404).json({ message: "Professor not found" });
+  //   }
+  //   res.professor = professor;
+  //   next();
+  // } catch (err) {
+  //   return res.status(500).json({ message: err.message });
+  // }
+
   try {
-    const professor = await Professor.findById(req.params.id);
-    if (professor == null) {
+    const professor = await Professor.findById(req.params.id).populate({
+      path: "college",
+      populate: { path: "university" },
+    });
+    if (!professor) {
       return res.status(404).json({ message: "Professor not found" });
     }
     res.professor = professor;
     next();
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    res.status(500).json({ message: err.message });
   }
 }
 
