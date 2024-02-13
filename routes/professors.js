@@ -40,24 +40,43 @@ router.get("/tempProfessor/all", async (req, res) => {
     res.json(tempProfessors);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).send("Server Error");
+  }
+});
+
+router.delete("/tempProfessor", async (req, res) => {
+  try {
+    if (req.body.passcode == process.env.PASSCODE) {
+      // Find the TempProfessor by ID and remove it from the database
+      const tempProfessor = await TempProfessor.findById(req.body.id);
+
+      // If TempProfessor is not found, return 404 status and error message
+      if (!tempProfessor) {
+        return res.status(404).json({ msg: "TempProfessor not found" });
+      }
+
+      // Remove the TempProfessor from the database
+      await TempProfessor.deleteOne({ _id: req.body.id });
+
+      // Return success message if TempProfessor is successfully deleted
+      res.json({ msg: "TempProfessor removed" });
+    }else{
+      return res.status(403).json({ msg: "Incorrect passcode" });
+    }
+  } catch (err) {
+    // Return server error message if any error occurs during deletion process
+    console.error(err.message);
+    res.status(500).send("Server Error");
   }
 });
 
 router.post("/tempProfessor/", async (req, res) => {
   try {
-    const {
-      name,
-      department,
-      gender,
-      title,
-      college,
-      university,
-      subjects,
-    } = req.body;
+    const { name, department, gender, title, college, university, subjects } =
+      req.body;
 
     // Split the subjects string into an array
-    const subjectsArray = subjects.split(',');
+    const subjectsArray = subjects.split(",");
 
     // Create a new temporary professor instance
     const newTempProfessor = new TempProfessor({
@@ -80,7 +99,6 @@ router.post("/tempProfessor/", async (req, res) => {
   }
 });
 
-
 // Create a professor
 router.post("/", async (req, res) => {
   const {
@@ -92,14 +110,14 @@ router.post("/", async (req, res) => {
     subjects,
     collegeName,
     universityName,
-    passcode
+    passcode,
   } = req.body;
 
   console.log(req.body);
 
-   if (passcode != process.env.PASSCODE) {
-      return res.status(403).send("Forbidden: Invalid passcode");
-    }
+  if (passcode != process.env.PASSCODE) {
+    return res.status(403).send("Forbidden: Invalid passcode");
+  }
 
   try {
     let university = await University.findOne({ name: universityName });
@@ -128,7 +146,16 @@ router.post("/", async (req, res) => {
     });
 
     const newProfessor = await professor.save();
-    await TempProfessor.findOneAndDelete({ _id: req.body.id });
+
+    const tempProfessor = await TempProfessor.findById(req.body.id);
+
+    // If TempProfessor is not found, return 404 status and error message
+    if (!tempProfessor) {
+      return res.status(404).json({ msg: "TempProfessor not found" });
+    }
+
+    // Remove the TempProfessor from the database
+    await TempProfessor.deleteOne({ _id: req.body.id });
 
     res.status(201).json(newProfessor);
   } catch (err) {
