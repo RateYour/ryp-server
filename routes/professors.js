@@ -60,7 +60,7 @@ router.delete("/tempProfessor", async (req, res) => {
 
       // Return success message if TempProfessor is successfully deleted
       res.json({ msg: "TempProfessor removed" });
-    }else{
+    } else {
       return res.status(403).json({ msg: "Incorrect passcode" });
     }
   } catch (err) {
@@ -259,6 +259,80 @@ router.post("/multipleprofessor/", async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 });
+
+router.get("/byUniversity/:universityId", async (req, res) => {
+  const { universityId } = req.params;
+  try {
+    const professors = await Professor.find()
+      .populate({
+        path: "college",
+        match: { university: universityId },
+        populate: {
+          path: "university",
+        },
+      })
+      .exec();
+
+    // Filter out professors whose college is not associated with the provided universityId
+    const filteredProfessors = professors.filter(
+      (professor) => professor.college !== null
+    );
+
+    res.json(filteredProfessors);
+  } catch (error) {
+    console.error("Error fetching professors:", error);
+    res.status(500).json({ message: "Error fetching professors" });
+  }
+});
+
+router.get('/prof/topThree', async (req, res) => {
+  try {
+    // Aggregate pipeline to sort professors by average rating and limit to top three
+    const topProfessors = await Professor.aggregate([
+      { 
+        $addFields: {
+          averageRating: { $avg: "$feedbacks.rating" } // Calculate average rating
+        }
+      },
+      {
+        $addFields: {
+          averageRating: { $round: ["$averageRating", 2] } // Round average rating to two decimal places
+        }
+      },
+      {
+        $sort: { averageRating: -1 } // Sort by average rating in descending order
+      },
+      {
+        $limit: 3 // Limit to top three professors
+      },
+      {
+        $lookup: {
+          from: 'colleges',
+          localField: 'college',
+          foreignField: '_id',
+          as: 'college' // Populate the college field
+        }
+      },
+      {
+        $unwind: "$college"
+      },
+      {
+        $lookup: {
+          from: 'universities',
+          localField: 'college.university',
+          foreignField: '_id',
+          as: 'college.university' // Populate the university field within college
+        }
+      }
+    ]);
+
+    res.json(topProfessors);
+  } catch (error) {
+    console.error('Error fetching top professors:', error);
+    res.status(500).json({ message: 'Error fetching top professors' });
+  }
+});
+
 
 // Delete a professor
 // router.delete("/:id", getProfessor, async (req, res) => {
